@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Geography Quiz</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--tg-theme-bg-color, #fff);
+      color: var(--tg-theme-text-color, #000);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 400px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 24px;
+    }
+
+    .score {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 18px;
+    }
+
+    .question {
+      background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      font-size: 18px;
+      text-align: center;
+    }
+
+    .options {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .option {
+      padding: 15px;
+      border: none;
+      border-radius: 10px;
+      background: var(--tg-theme-button-color, #3390ec);
+      color: var(--tg-theme-button-text-color, #fff);
+      font-size: 16px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .option:active {
+      opacity: 0.7;
+    }
+
+    .option.correct {
+      background: #31b545;
+    }
+
+    .option.wrong {
+      background: #e53935;
+    }
+
+    .option:disabled {
+      cursor: default;
+    }
+
+    .result {
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    .result h2 {
+      margin-bottom: 20px;
+    }
+
+    .restart {
+      margin-top: 20px;
+      padding: 15px 30px;
+      border: none;
+      border-radius: 10px;
+      background: var(--tg-theme-button-color, #3390ec);
+      color: var(--tg-theme-button-text-color, #fff);
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>🌍 Geography Quiz</h1>
+    <div class="score">Score: <span id="score">0</span>/<span id="total">0</span></div>
+    <div id="game"></div>
+  </div>
+
+  <script>
+    const questions = [
+      { q: "What is the capital of France?", options: ["London", "Paris", "Berlin", "Madrid"], answer: 1 },
+      { q: "Which country has the largest population?", options: ["USA", "India", "China", "Russia"], answer: 2 },
+      { q: "What is the longest river in the world?", options: ["Amazon", "Nile", "Yangtze", "Mississippi"], answer: 1 },
+      { q: "Which continent is the Sahara Desert located on?", options: ["Asia", "Australia", "Africa", "South America"], answer: 2 },
+      { q: "What is the capital of Japan?", options: ["Seoul", "Beijing", "Tokyo", "Bangkok"], answer: 2 },
+      { q: "Which ocean is the largest?", options: ["Atlantic", "Indian", "Arctic", "Pacific"], answer: 3 },
+      { q: "What country is known as the Land of the Rising Sun?", options: ["China", "Japan", "Thailand", "Vietnam"], answer: 1 },
+      { q: "Which mountain is the tallest in the world?", options: ["K2", "Kangchenjunga", "Mount Everest", "Lhotse"], answer: 2 },
+      { q: "What is the smallest country in the world?", options: ["Monaco", "San Marino", "Vatican City", "Liechtenstein"], answer: 2 },
+      { q: "Which country has the most time zones?", options: ["Russia", "USA", "China", "France"], answer: 3 },
+    ];
+
+    let current = 0;
+    let score = 0;
+    let shuffled = [];
+
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+    }
+
+    function shuffle(arr) {
+      return [...arr].sort(() => Math.random() - 0.5);
+    }
+
+    function startGame() {
+      current = 0;
+      score = 0;
+      shuffled = shuffle(questions).slice(0, 5);
+      document.getElementById('score').textContent = score;
+      document.getElementById('total').textContent = shuffled.length;
+      showQuestion();
+    }
+
+    function showQuestion() {
+      const game = document.getElementById('game');
+      const q = shuffled[current];
+
+      game.innerHTML = `
+        <div class="question">${current + 1}. ${q.q}</div>
+        <div class="options">
+          ${q.options.map((opt, i) => `<button class="option" data-index="${i}">${opt}</button>`).join('')}
+        </div>
+      `;
+
+      game.querySelectorAll('.option').forEach(btn => {
+        btn.addEventListener('click', () => selectAnswer(parseInt(btn.dataset.index)));
+      });
+    }
+
+    function selectAnswer(index) {
+      const q = shuffled[current];
+      const buttons = document.querySelectorAll('.option');
+
+      buttons.forEach(btn => btn.disabled = true);
+
+      if (index === q.answer) {
+        score++;
+        buttons[index].classList.add('correct');
+        document.getElementById('score').textContent = score;
+      } else {
+        buttons[index].classList.add('wrong');
+        buttons[q.answer].classList.add('correct');
+      }
+
+      setTimeout(() => {
+        current++;
+        if (current < shuffled.length) {
+          showQuestion();
+        } else {
+          showResult();
+        }
+      }, 1000);
+    }
+
+    function showResult() {
+      const game = document.getElementById('game');
+      const percent = Math.round((score / shuffled.length) * 100);
+      let emoji = percent >= 80 ? '🏆' : percent >= 60 ? '👍' : '📚';
+
+      game.innerHTML = `
+        <div class="result">
+          <h2>${emoji} Quiz Complete!</h2>
+          <p>You scored ${score} out of ${shuffled.length} (${percent}%)</p>
+          <button class="restart" onclick="startGame()">Play Again</button>
+        </div>
+      `;
+
+      if (tg) {
+        tg.MainButton.text = "Share Result";
+        tg.MainButton.show();
+        tg.MainButton.onClick(() => {
+          tg.sendData(JSON.stringify({ score, total: shuffled.length, percent }));
+        });
+      }
+    }
+
+    startGame();
+  </script>
+</body>
+
+</html>
